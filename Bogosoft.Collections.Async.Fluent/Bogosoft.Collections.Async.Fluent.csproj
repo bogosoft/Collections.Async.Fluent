@@ -15,7 +15,7 @@
 		<Version>1.0.0</Version>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="Bogosoft.Collections.Async" Version="2.0.1.*" />
+		<PackageReference Include="Bogosoft.Collections.Async" Version="2.0.1.28" />
 	</ItemGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.0|AnyCPU'">
 		<DocumentationFile>bin\Debug\netstandard2.0\Bogosoft.Collections.Async.Fluent.xml</DocumentationFile>
