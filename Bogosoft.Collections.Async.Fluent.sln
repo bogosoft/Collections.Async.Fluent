@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27004.2005
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bogosoft.Collections.Async.Fluent", "Bogosoft.Collections.Async.Fluent\Bogosoft.Collections.Async.Fluent.csproj", "{1F3B74B1-3A92-46E4-B3E2-79D5232E49F0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bogosoft.Collections.Async.Fluent.Tests", "Bogosoft.Collections.Async.Fluent.Tests\Bogosoft.Collections.Async.Fluent.Tests.csproj", "{DC2697D0-120C-4613-9233-56264933DD54}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1F3B74B1-3A92-46E4-B3E2-79D5232E49F0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1F3B74B1-3A92-46E4-B3E2-79D5232E49F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1F3B74B1-3A92-46E4-B3E2-79D5232E49F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1F3B74B1-3A92-46E4-B3E2-79D5232E49F0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DC2697D0-120C-4613-9233-56264933DD54}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DC2697D0-120C-4613-9233-56264933DD54}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DC2697D0-120C-4613-9233-56264933DD54}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DC2697D0-120C-4613-9233-56264933DD54}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7BE6A456-6856-4D33-B790-73D1F0CB0DB2}
+	EndGlobalSection
+EndGlobal
