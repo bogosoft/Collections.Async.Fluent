@@ -346,6 +346,51 @@ namespace Bogosoft.Collections.Async.Fluent
         }
 
         /// <summary>
+        /// Condense the current sequence into a sequence of only its distinct elements. Elements will be
+        /// compared to one another using the <see cref="EqualityComparer{T}.Default"/> value.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
+        /// <param name="source">The current sequence.</param>
+        /// <returns>A sequence of distinct elements.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown in the event that the current sequence is null.
+        /// </exception>
+        public static IAsyncEnumerable<T> Distinct<T>(this IAsyncEnumerable<T> source)
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            return new DistinctSequence<T>(source, EqualityComparer<T>.Default);
+        }
+
+        /// <summary>
+        /// Condense the current sequence into a sequence of only its distinct elements.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
+        /// <param name="source">The current sequence.</param>
+        /// <param name="comparer">A strategy for comparing the equality of elements.</param>
+        /// <returns>A sequence of distinct elements.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown in the event that either the current sequence or the given comparer is null.
+        /// </exception>
+        public static IAsyncEnumerable<T> Distinct<T>(this IAsyncEnumerable<T> source, IEqualityComparer<T> comparer)
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            if (comparer is null)
+            {
+                throw new ArgumentNullException(nameof(comparer));
+            }
+
+            return new DistinctSequence<T>(source, comparer);
+        }
+
+        /// <summary>
         /// Get the first element in the current sequence.
         /// </summary>
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
