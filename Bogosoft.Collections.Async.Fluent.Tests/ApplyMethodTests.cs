@@ -1,4 +1,4 @@
-﻿using Bogosoft.Testing.Objects;
+using Bogosoft.Testing.Objects;
 using NUnit.Framework;
 using Shouldly;
 using System;
@@ -12,7 +12,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
     public class ApplyMethodTests
     {
         [TestCase]
-        public async Task ApplyCallsFunctionWhenSourceSequenceAndActionAreNotNull()
+        public async Task ApplyAsyncCallsFunctionWhenSourceSequenceAndActionAreNotNull()
         {
             var source = Integer.RandomSequence(16).ToArray();
 
@@ -37,7 +37,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
         }
 
         [TestCase]
-        public async Task ApplyThrowsArgumentNullExceptionWhenActionIsNull()
+        public async Task ApplyAsyncThrowsArgumentNullExceptionWhenGivenActionIsNull()
         {
             IAsyncEnumerable<int> source = null;
 
@@ -49,7 +49,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
         }
 
         [TestCase]
-        public async Task ApplyThrowsArgumentNullExceptionWhenSourceSequenceIsNull()
+        public async Task ApplyAsyncThrowsArgumentNullExceptionWhenSourceSequenceIsNull()
         {
             var count = 0;
 
