@@ -1,4 +1,4 @@
-using Bogosoft.Testing.Objects;
+﻿using Bogosoft.Testing.Objects;
 using NUnit.Framework;
 using Shouldly;
 using System;
@@ -39,13 +39,13 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
         [TestCase]
         public async Task ApplyAsyncThrowsArgumentNullExceptionWhenGivenActionIsNull()
         {
-            IAsyncEnumerable<int> source = null;
+            var source = Integer.RandomSequence(16).ToAsyncEnumerable();
+
+            source.ShouldNotBeNull();
+
+            typeof(IAsyncEnumerable<int>).IsAssignableFrom(source.GetType()).ShouldBeTrue();
 
             await source.ApplyAsync(null as Action<int>).ShouldThrowAsync<ArgumentNullException>();
-
-            Func<int, CancellationToken, Task> action = null;
-
-            await source.ApplyAsync(action).ShouldThrowAsync<ArgumentNullException>();
         }
 
         [TestCase]
@@ -54,15 +54,73 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
             var count = 0;
 
             await (null as IAsyncEnumerable<int>).ApplyAsync(x => count += x).ShouldThrowAsync<ArgumentNullException>();
+        }
 
-            Func<int, CancellationToken, Task> action = async (i, t) =>
+        [TestCase]
+        public async Task ApplyCallsActionWhenActionDecoratedSequenceIsEnumerated()
+        {
+            int actual = 0, expected = 0;
+            int[] ints;
+
+            do
             {
-                await Task.Delay(10, t);
+                ints = Integer.RandomSequence(32, -32768, 32767).ToArray();
 
-                count += i;
-            };
+                expected = ints.Sum();
 
-            await (null as IAsyncEnumerable<int>).ApplyAsync(action).ShouldThrowAsync<ArgumentNullException>();
+            } while (expected == 0);
+
+            var ignore = await ints.ToAsyncEnumerable().Apply(x => actual += x).ToArrayAsync();
+
+            actual.ShouldBe(expected);
+        }
+
+        [TestCase]
+        public void ApplyThrowsArgumentNullExceptionWhenGivenActionIsNull()
+        {
+            var source = Integer.RandomSequence(16).ToAsyncEnumerable();
+
+            Exception exception = null;
+
+            try
+            {
+                source.ShouldNotBeNull();
+
+                source.Apply(null);
+            }
+            catch (Exception e)
+            {
+                exception = e;
+            }
+
+            exception.ShouldNotBeNull();
+
+            exception.ShouldBeOfType<ArgumentNullException>();
+        }
+
+        [TestCase]
+        public void ApplyThrowsArgumentNullExceptionWhenSourceSequenceIsNull()
+        {
+            IAsyncEnumerable<string> source = null;
+
+            Exception exception = null;
+
+            try
+            {
+                int length = 0;
+
+                source.ShouldBeNull();
+
+                source.Apply(s => length += s.Length);
+            }
+            catch (Exception e)
+            {
+                exception = e;
+            }
+
+            exception.ShouldNotBeNull();
+
+            exception.ShouldBeOfType<ArgumentNullException>();
         }
     }
 }

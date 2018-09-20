@@ -114,6 +114,37 @@ namespace Bogosoft.Collections.Async.Fluent
         }
 
         /// <summary>
+        /// Configure the current sequence so that, when enumerated, a given
+        /// action is invoked on each enumerated element.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
+        /// <param name="source">The current sequence.</param>
+        /// <param name="action">
+        /// An action to invoke on each element of the current sequence.
+        /// </param>
+        /// <returns>
+        /// The current sequence configured to invoke an action on each element of the
+        /// current sequence once enumeration has started.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown in the event that either the current sequence or the given action are null.
+        /// </exception>
+        public static IAsyncEnumerable<T> Apply<T>(this IAsyncEnumerable<T> source, Action<T> action)
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            if (action is null)
+            {
+                throw new ArgumentNullException(nameof(action));
+            }
+
+            return new DelegateAppliedSequence<T>(source, action);
+        }
+
+        /// <summary>
         /// Enumerate the current sequence, applying a given action to each enumerated element.
         /// </summary>
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
