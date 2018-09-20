@@ -114,7 +114,7 @@ namespace Bogosoft.Collections.Async.Fluent
         }
 
         /// <summary>
-        /// Apply a given action to every element in the current sequence.
+        /// Enumerate the current sequence, applying a given action to each enumerated element.
         /// </summary>
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
@@ -147,7 +147,7 @@ namespace Bogosoft.Collections.Async.Fluent
         }
 
         /// <summary>
-        /// Apply a given asynchronous action to every element in the current sequence.
+        /// Enumerate the current sequence, applying a given action to each enumerated element.
         /// </summary>
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
