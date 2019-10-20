@@ -40,21 +40,20 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
             var a = Integer.RandomSequence(size).ToArray();
             var b = GetRandomGuids(size).ToArray();
 
-            using (var x = a.ToAsyncEnumerable().GetEnumerator())
-            using (var y = b.ToAsyncEnumerable().GetEnumerator())
-            using (var z = a.ToAsyncEnumerable().Zip(b.ToAsyncEnumerable(), Merge).GetEnumerator())
+            await using var x = a.ToAsyncEnumerable().GetAsyncEnumerator();
+            await using var y = b.ToAsyncEnumerable().GetAsyncEnumerator();
+            await using var z = a.ToAsyncEnumerable().ZipAsync(b.ToAsyncEnumerable(), Merge).GetAsyncEnumerator();
+
+            while (await z.MoveNextAsync())
             {
-                while (await z.MoveNextAsync())
-                {
-                    await x.MoveNextAsync().ShouldBeTrueAsync();
-                    await y.MoveNextAsync().ShouldBeTrueAsync();
+                await x.MoveNextAsync().ShouldBeTrueAsync();
+                await y.MoveNextAsync().ShouldBeTrueAsync();
 
-                    z.Current.ShouldBe(Merge(x.Current, y.Current));
-                }
-
-                await x.MoveNextAsync().ShouldBeFalseAsync();
-                await y.MoveNextAsync().ShouldBeFalseAsync();
+                z.Current.ShouldBe(Merge(x.Current, y.Current));
             }
+
+            await x.MoveNextAsync().ShouldBeFalseAsync();
+            await y.MoveNextAsync().ShouldBeFalseAsync();
         }
 
         [TestCase]
@@ -68,9 +67,9 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             given.ShouldBeNull();
 
-            Action test = () => source.Zip(given, Merge);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.ZipAsync(given, Merge)
+                  .ConsumeAsync()
+                  .ShouldThrow<ArgumentNullException>();
         }
 
         [TestCase]
@@ -86,9 +85,9 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             selector.ShouldBeNull();
 
-            Action test = () => a.Zip(b, selector);
-
-            test.ShouldThrow<ArgumentNullException>();
+            a.ZipAsync(b, selector)
+             .ConsumeAsync()
+             .ShouldThrow<ArgumentNullException>();
         }
 
         [TestCase]
@@ -102,9 +101,9 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             given.ShouldNotBeNull();
 
-            Action test = () => source.Zip(given, Merge);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.ZipAsync(given, Merge)
+                  .ConsumeAsync()
+                  .ShouldThrow<ArgumentNullException>();
         }
 
         [TestCase]
@@ -115,21 +114,20 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
             var a = Integer.RandomSequence(size).ToArray();
             var b = GetRandomGuids(size).ToArray();
 
-            using (var x = a.ToAsyncEnumerable().GetEnumerator())
-            using (var y = b.ToAsyncEnumerable().GetEnumerator())
-            using (var z = a.ToAsyncEnumerable().Zip(b.ToAsyncEnumerable(), MergeAsync).GetEnumerator())
+            await using var x = a.ToAsyncEnumerable().GetAsyncEnumerator();
+            await using var y = b.ToAsyncEnumerable().GetAsyncEnumerator();
+            await using var z = a.ToAsyncEnumerable().ZipAsync(b.ToAsyncEnumerable(), MergeAsync).GetAsyncEnumerator();
+
+            while (await z.MoveNextAsync())
             {
-                while (await z.MoveNextAsync())
-                {
-                    await x.MoveNextAsync().ShouldBeTrueAsync();
-                    await y.MoveNextAsync().ShouldBeTrueAsync();
+                await x.MoveNextAsync().ShouldBeTrueAsync();
+                await y.MoveNextAsync().ShouldBeTrueAsync();
 
-                    z.Current.ShouldBe(await MergeAsync(x.Current, y.Current, CancellationToken.None));
-                }
-
-                await x.MoveNextAsync().ShouldBeFalseAsync();
-                await y.MoveNextAsync().ShouldBeFalseAsync();
+                z.Current.ShouldBe(await MergeAsync(x.Current, y.Current, CancellationToken.None));
             }
+
+            await x.MoveNextAsync().ShouldBeFalseAsync();
+            await y.MoveNextAsync().ShouldBeFalseAsync();
         }
 
         [TestCase]
@@ -143,9 +141,9 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             given.ShouldBeNull();
 
-            Action test = () => source.Zip(given, MergeAsync);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.ZipAsync(given, MergeAsync)
+                  .ConsumeAsync()
+                  .ShouldThrow<ArgumentNullException>();
         }
 
         [TestCase]
@@ -159,11 +157,9 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             Func<object, string, Task<int>> selector = null;
 
-            selector.ShouldBeNull();
-
-            Action test = () => a.Zip(b, selector);
-
-            test.ShouldThrow<ArgumentNullException>();
+            a.ZipAsync(b, selector)
+             .ConsumeAsync()
+             .ShouldThrow<ArgumentNullException>();
         }
 
         [TestCase]
@@ -177,9 +173,9 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             given.ShouldNotBeNull();
 
-            Action test = () => source.Zip(given, MergeAsync);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.ZipAsync(given, MergeAsync)
+                  .ConsumeAsync()
+                  .ShouldThrow<ArgumentNullException>();
         }
     }
 }

@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using Shouldly;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -41,7 +42,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             source.ShouldNotBeNull();
 
-            await source.AllAsync(null).ShouldThrowAsync<ArgumentNullException>();
+            await source.AllAsync(null).ShouldThrowAsync<bool, ArgumentNullException>();
         }
 
         [TestCase]
@@ -51,7 +52,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             source.ShouldBeNull();
 
-            await source.AllAsync(x => x % 2 == 0).ShouldThrowAsync<ArgumentNullException>();
+            await source.AllAsync(x => x % 2 == 0).ShouldThrowAsync<bool, ArgumentNullException>();
         }
     }
 }

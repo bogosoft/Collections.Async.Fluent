@@ -1,6 +1,7 @@
 ﻿using NUnit.Framework;
 using Shouldly;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -12,13 +13,13 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
         [TestCase]
         public async Task TakeLimitsTheNumberOfElementsReturnedFromASequence()
         {
-            ulong size = 8;
+            long size = 8;
 
             var ints = Enumerable.Range(0, (int)size * 2);
 
             var sequence = ints.ToAsyncEnumerable();
 
-            (await sequence.Take(size).ToArrayAsync()).SequenceEqual(ints.Take((int)size)).ShouldBeTrue();
+            (await sequence.TakeAsync(size).ToArrayAsync()).SequenceEqual(ints.Take((int)size)).ShouldBeTrue();
         }
 
         [TestCase]
@@ -28,9 +29,9 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             source.ShouldBeNull();
 
-            Action test = () => source.Take(25);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.TakeAsync(25)
+                  .ConsumeAsync()
+                  .ShouldThrow<ArgumentNullException>();
         }
     }
 }

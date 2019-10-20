@@ -59,7 +59,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             comparer.ShouldBeNull();
 
-            await source.ContainsAsync(0, comparer).ShouldThrowAsync<ArgumentNullException>();
+            await source.ContainsAsync(0, comparer).ShouldThrowAsync<bool, ArgumentNullException>();
         }
 
         [TestCase]
@@ -69,7 +69,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             source.ShouldBeNull();
 
-            await source.ContainsAsync(0).ShouldThrowAsync<ArgumentNullException>();
+            await source.ContainsAsync(0).ShouldThrowAsync<bool, ArgumentNullException>();
         }
     }
 }

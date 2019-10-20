@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using Shouldly;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -27,7 +28,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             source.ShouldNotBeEmpty();
 
-            var last = source[source.Length - 1];
+            var last = source[^1];
 
             await source.ToAsyncEnumerable().LastOrDefaultAsync().ShouldBeAsync(last);
         }
@@ -83,9 +84,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             predicate.ShouldBeNull();
 
-            Action test = () => source.LastOrDefaultAsync(predicate);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.LastOrDefaultAsync(predicate).ShouldThrow<ArgumentNullException>();
         }
 
         [TestCase]
@@ -95,9 +94,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             source.ShouldBeNull();
 
-            Action test = () => source.LastOrDefaultAsync(x => x % 2 == 3);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.LastOrDefaultAsync(x => x % 2 == 3).ShouldThrow<ArgumentNullException>();
         }
     }
 }

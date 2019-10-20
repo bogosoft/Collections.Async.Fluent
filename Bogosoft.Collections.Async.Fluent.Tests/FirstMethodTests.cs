@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using Shouldly;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -62,9 +63,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             predicate.ShouldBeNull();
 
-            Action test = () => source.FirstAsync(predicate);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.FirstAsync(predicate).ShouldThrow<ArgumentNullException>();
         }
 
         [TestCase]
@@ -74,9 +73,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             source.ShouldBeNull();
 
-            Action test = () => source.FirstAsync(Integer.Even);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.FirstAsync(Integer.Even).ShouldThrow<ArgumentNullException>();
         }
 
         [TestCase]

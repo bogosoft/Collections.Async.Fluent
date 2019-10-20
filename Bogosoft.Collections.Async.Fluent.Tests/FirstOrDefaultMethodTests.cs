@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using Shouldly;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -95,9 +96,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             source.ShouldBeNull();
 
-            Action test = () => source.FirstOrDefaultAsync(Integer.Odd);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.FirstOrDefaultAsync(Integer.Odd).ShouldThrow<ArgumentNullException>();
         }
     }
 }

@@ -27,9 +27,9 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             IEqualityComparer<int> comparer = null;
 
-            Action test = () => source = source.Distinct(comparer);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.DistinctAsync(comparer)
+                  .ConsumeAsync()
+                  .ShouldThrow<ArgumentNullException>();
         }
 
         [TestCase]
@@ -37,9 +37,9 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
         {
             IAsyncEnumerable<int> source = null;
 
-            Action test = () => source = source.Distinct();
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.DistinctAsync()
+                  .ConsumeAsync()
+                  .ShouldThrow<ArgumentNullException>();
         }
 
         [TestCase]
@@ -49,7 +49,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             source.Length.ShouldBeGreaterThan(source.Distinct().Count());
 
-            var actual = await source.ToAsyncEnumerable().Distinct().ToArrayAsync();
+            var actual = await source.ToAsyncEnumerable().DistinctAsync().ToArrayAsync();
 
             actual.Length.ShouldBe(source.Distinct().Count());
         }
@@ -65,7 +65,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             expected.Length.ShouldBeLessThan(source.Length);
 
-            var actual = await source.ToAsyncEnumerable().Distinct(comparer).ToArrayAsync();
+            var actual = await source.ToAsyncEnumerable().DistinctAsync(comparer).ToArrayAsync();
 
             actual.Length.ShouldBe(expected.Length);
 

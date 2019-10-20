@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using Shouldly;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -17,18 +18,17 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
         {
             var all = CelestialBody.All;
 
-            using (var a = all.ToAsyncEnumerable().Where(IsPlanet).GetEnumerator())
-            using (var b = all.Where(IsPlanet).GetEnumerator())
+            await using var a = all.ToAsyncEnumerable().WhereAsync(IsPlanet).GetAsyncEnumerator();
+            using var b = all.Where(IsPlanet).GetEnumerator();
+
+            while (await a.MoveNextAsync())
             {
-                while (await a.MoveNextAsync())
-                {
-                    b.MoveNext().ShouldBeTrue();
+                b.MoveNext().ShouldBeTrue();
 
-                    b.Current.Name.ShouldBe(a.Current.Name);
-                }
-
-                b.MoveNext().ShouldBeFalse();
+                b.Current.Name.ShouldBe(a.Current.Name);
             }
+
+            b.MoveNext().ShouldBeFalse();
         }
 
         [TestCase]
@@ -42,9 +42,9 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             predicate.ShouldBeNull();
 
-            Action test = () => source.Where(predicate);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.WhereAsync(predicate)
+                  .ConsumeAsync()
+                  .ShouldThrow<ArgumentNullException>();
         }
 
         [TestCase]
@@ -54,9 +54,9 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             source.ShouldBeNull();
 
-            Action test = () => source.Where(IsPlanet);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.WhereAsync(IsPlanet)
+                  .ConsumeAsync()
+                  .ShouldThrow<ArgumentNullException>();
         }
     }
 }

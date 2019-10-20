@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using Shouldly;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -70,13 +71,13 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             } while (expected == 0);
 
-            var ignore = await ints.ToAsyncEnumerable().Apply(x => actual += x).ToArrayAsync();
+            await ints.ToAsyncEnumerable().ApplyAsync(x => actual += x);
 
             actual.ShouldBe(expected);
         }
 
         [TestCase]
-        public void ApplyThrowsArgumentNullExceptionWhenGivenActionIsNull()
+        public async Task ApplyThrowsArgumentNullExceptionWhenGivenActionIsNull()
         {
             var source = Integer.RandomSequence(16).ToAsyncEnumerable();
 
@@ -86,7 +87,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
             {
                 source.ShouldNotBeNull();
 
-                source.Apply(null);
+                await source.ApplyAsync(null);
             }
             catch (Exception e)
             {
@@ -99,7 +100,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
         }
 
         [TestCase]
-        public void ApplyThrowsArgumentNullExceptionWhenSourceSequenceIsNull()
+        public async Task ApplyThrowsArgumentNullExceptionWhenSourceSequenceIsNull()
         {
             IAsyncEnumerable<string> source = null;
 
@@ -111,7 +112,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
                 source.ShouldBeNull();
 
-                source.Apply(s => length += s.Length);
+                await source.ApplyAsync(s => length += s.Length);
             }
             catch (Exception e)
             {

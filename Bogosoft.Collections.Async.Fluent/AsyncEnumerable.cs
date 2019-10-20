@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Bogosoft.Collections.Async.Fluent
 {
     /// <summary>
-    /// Extended functionality for the <see cref="IAsyncEnumerable{T}"/> contract.
+    /// Provides static members for working with <see cref="IAsyncEnumerable{T}"/> types.
     /// </summary>
-    public static class IAsyncEnumerableExtensions
+    public static class AsyncEnumerable
     {
         /// <summary>
         /// Determine whether all elements in a sequence satsify a given condition.
@@ -16,17 +17,17 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
         /// <param name="predicate">A predicate to apply to each element in the sequence.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// True if every element in the current sequence satisfies the given conidition; false otherwise.
         /// </returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown in the event that either the source sequence of predicate is null.
+        /// Thrown in the event that either the source sequence or predicate is null.
         /// </exception>
-        public static async Task<bool> AllAsync<T>(
+        public static async ValueTask<bool> AllAsync<T>(
             this IAsyncEnumerable<T> source,
             Func<T, bool> predicate,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
             if (source is null)
@@ -39,18 +40,15 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(predicate));
             }
 
-            using (var enumerator = source.GetEnumerator())
+            await foreach (var x in source.WithCancellation(token))
             {
-                while (await enumerator.MoveNextAsync(token))
+                if (!predicate.Invoke(x))
                 {
-                    if (!predicate.Invoke(enumerator.Current))
-                    {
-                        return false;
-                    }
+                    return false;
                 }
-
-                return true;
             }
+
+            return true;
         }
 
         /// <summary>
@@ -58,16 +56,16 @@ namespace Bogosoft.Collections.Async.Fluent
         /// </summary>
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// True if the current sequence contains at least one element; false otherwise.
         /// </returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that the current sequence is null.
         /// </exception>
-        public static async Task<bool> AnyAsync<T>(
+        public static async ValueTask<bool> AnyAsync<T>(
             this IAsyncEnumerable<T> source,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
             if (source is null)
@@ -75,10 +73,9 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(source));
             }
 
-            using (var enumerator = source.GetEnumerator())
-            {
-                return await enumerator.MoveNextAsync(token).ConfigureAwait(false);
-            }
+            await using var enumerator = source.GetAsyncEnumerator(token);
+
+            return await enumerator.MoveNextAsync().ConfigureAwait(false);
         }
 
         /// <summary>
@@ -87,17 +84,17 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
         /// <param name="predicate">A predicate to be applied to all elements in the current sequence.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// True if at least one element in the current sequence satisfies the given condition; false otherwise.
         /// </returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that the given source or predicate is null.
         /// </exception>
-        public static Task<bool> AnyAsync<T>(
+        public static ValueTask<bool> AnyAsync<T>(
             this IAsyncEnumerable<T> source,
             Func<T, bool> predicate,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
             if (source is null)
@@ -110,7 +107,7 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(predicate));
             }
 
-            return source.Where(predicate).AnyAsync(token);
+            return source.WhereAsync(predicate, token).AnyAsync();
         }
 
         /// <summary>
@@ -122,6 +119,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <param name="action">
         /// An action to invoke on each element of the current sequence.
         /// </param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// The current sequence configured to invoke an action on each element of the
         /// current sequence once enumeration has started.
@@ -129,33 +127,10 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that either the current sequence or the given action are null.
         /// </exception>
-        public static IAsyncEnumerable<T> Apply<T>(this IAsyncEnumerable<T> source, Action<T> action)
-        {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
-
-            if (action is null)
-            {
-                throw new ArgumentNullException(nameof(action));
-            }
-
-            return new DelegateAppliedSequence<T>(source, action);
-        }
-
-        /// <summary>
-        /// Enumerate the current sequence, applying a given action to each enumerated element.
-        /// </summary>
-        /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
-        /// <param name="source">The current sequence.</param>
-        /// <param name="action">An action to apply to each element in the current sequence.</param>
-        /// <param name="token">A cancellation instruction.</param>
-        /// <returns>A task representing an asynchronous operation.</returns>
         public static async Task ApplyAsync<T>(
             this IAsyncEnumerable<T> source,
             Action<T> action,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
             if (source is null)
@@ -168,12 +143,9 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(action));
             }
 
-            using (var enumerator = source.GetEnumerator())
+            await foreach (var x in source.WithCancellation(token))
             {
-                while (await enumerator.MoveNextAsync(token).ConfigureAwait(false))
-                {
-                    action.Invoke(enumerator.Current);
-                }
+                action.Invoke(x);
             }
         }
 
@@ -183,7 +155,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
         /// <param name="action">An action to apply to each element in the current sequence.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>A task representing an asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that the current sequence or given action is null.
@@ -191,7 +163,7 @@ namespace Bogosoft.Collections.Async.Fluent
         public static async Task ApplyAsync<T>(
             this IAsyncEnumerable<T> source,
             Func<T, CancellationToken, Task> action,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
             if (source is null)
@@ -204,12 +176,9 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(action));
             }
 
-            using (var enumerator = source.GetEnumerator())
+            await foreach (var x in source.WithCancellation(token))
             {
-                while (await enumerator.MoveNextAsync(token).ConfigureAwait(false))
-                {
-                    await action.Invoke(enumerator.Current, token).ConfigureAwait(false);
-                }
+                await action.Invoke(x, token);
             }
         }
 
@@ -219,13 +188,19 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
         /// <param name="target">A sequence of elements append to the current sequence.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// A single, concatenated sequence consisting of the current sequence and another sequence.
         /// </returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that either the current or given sequence is null.
         /// </exception>
-        public static IAsyncEnumerable<T> Concat<T>(this IAsyncEnumerable<T> source, IAsyncEnumerable<T> target)
+        public static async IAsyncEnumerable<T> ConcatAsync<T>(
+            this IAsyncEnumerable<T> source,
+            IAsyncEnumerable<T> target,
+            [EnumeratorCancellation]
+            CancellationToken token = default
+            )
         {
             if (source is null)
             {
@@ -237,7 +212,15 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(target));
             }
 
-            return new ConcatenatedSequence<T>(source, target);
+            await foreach (var x in source.WithCancellation(token))
+            {
+                yield return x;
+            }
+
+            await foreach (var x in target.WithCancellation(token))
+            {
+                yield return x;
+            }
         }
 
         /// <summary>
@@ -247,17 +230,17 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
         /// <param name="item">An item to look for in the current sequence.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// True if the current sequence contains the given item; false otherwise.
         /// </returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that the current sequence is null.
         /// </exception>
-        public static Task<bool> ContainsAsync<T>(
+        public static ValueTask<bool> ContainsAsync<T>(
             this IAsyncEnumerable<T> source,
             T item,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
             return source.ContainsAsync(item, EqualityComparer<T>.Default, token);
@@ -270,18 +253,18 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <param name="source">The current sequence.</param>
         /// <param name="item">An item to look for in the current sequence.</param>
         /// <param name="comparer">A comparison strategy to use when looking for the given item.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// True if the current sequence contains the given item; false otherwise.
         /// </returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that the current sequence or given comparer is null.
         /// </exception>
-        public static async Task<bool> ContainsAsync<T>(
+        public static async ValueTask<bool> ContainsAsync<T>(
             this IAsyncEnumerable<T> source,
             T item,
             IEqualityComparer<T> comparer,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
             if (source is null)
@@ -294,18 +277,15 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(comparer));
             }
 
-            using (var enumerator = source.GetEnumerator())
+            await foreach (var x in source.WithCancellation(token))
             {
-                while (await enumerator.MoveNextAsync(token).ConfigureAwait(false))
+                if (comparer.Equals(x, item))
                 {
-                    if (comparer.Equals(item, enumerator.Current))
-                    {
-                        return true;
-                    }
+                    return true;
                 }
-
-                return false;
             }
+
+            return false;
         }
 
         /// <summary>
@@ -313,16 +293,16 @@ namespace Bogosoft.Collections.Async.Fluent
         /// </summary>
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// A value corresponding to the number of elements in the current sequence.
         /// </returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that the current sequence is null.
         /// </exception>
-        public static async Task<ulong> CountAsync<T>(
+        public static async ValueTask<long> CountAsync<T>(
             this IAsyncEnumerable<T> source,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
             if (source is null)
@@ -330,17 +310,14 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(source));
             }
 
-            using (var enumerator = source.GetEnumerator())
+            long count = 0;
+
+            await foreach (var x in source.WithCancellation(token))
             {
-                ulong total = 0;
-
-                while (await enumerator.MoveNextAsync(token).ConfigureAwait(false))
-                {
-                    ++total;
-                }
-
-                return total;
+                count += 1;
             }
+
+            return count;
         }
 
         /// <summary>
@@ -349,7 +326,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
         /// <param name="predicate">A condition to check each element of the current sequence against.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// A value corresponding to the number of elements in the current sequence
         /// that satisfy the given condition.
@@ -357,10 +334,10 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that the current sequence or given predicate is null.
         /// </exception>
-        public static Task<ulong> CountAsync<T>(
+        public static ValueTask<long> CountAsync<T>(
             this IAsyncEnumerable<T> source,
             Func<T, bool> predicate,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
             if (source is null)
@@ -373,7 +350,7 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(predicate));
             }
 
-            return source.Where(predicate).CountAsync(token);
+            return source.WhereAsync(predicate, token).CountAsync();
         }
 
         /// <summary>
@@ -382,18 +359,17 @@ namespace Bogosoft.Collections.Async.Fluent
         /// </summary>
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>A sequence of distinct elements.</returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that the current sequence is null.
         /// </exception>
-        public static IAsyncEnumerable<T> Distinct<T>(this IAsyncEnumerable<T> source)
+        public static IAsyncEnumerable<T> DistinctAsync<T>(
+            this IAsyncEnumerable<T> source,
+            CancellationToken token = default
+            )
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
-
-            return new DistinctSequence<T>(source, EqualityComparer<T>.Default);
+            return source.DistinctAsync(EqualityComparer<T>.Default, token);
         }
 
         /// <summary>
@@ -402,11 +378,17 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
         /// <param name="comparer">A strategy for comparing the equality of elements.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>A sequence of distinct elements.</returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that either the current sequence or the given comparer is null.
         /// </exception>
-        public static IAsyncEnumerable<T> Distinct<T>(this IAsyncEnumerable<T> source, IEqualityComparer<T> comparer)
+        public static async IAsyncEnumerable<T> DistinctAsync<T>(
+            this IAsyncEnumerable<T> source,
+            IEqualityComparer<T> comparer,
+            [EnumeratorCancellation]
+            CancellationToken token = default
+            )
         {
             if (source is null)
             {
@@ -418,7 +400,15 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(comparer));
             }
 
-            return new DistinctSequence<T>(source, comparer);
+            var encountered = new HashSet<T>(comparer);
+
+            await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
+            {
+                if (encountered.Add(x))
+                {
+                    yield return x;
+                }
+            }
         }
 
         /// <summary>
@@ -426,7 +416,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// </summary>
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>The first element in the current sequence if it is not null or empty.</returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that the current sequence is null.
@@ -436,7 +426,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// </exception>
         public static async Task<T> FirstAsync<T>(
             this IAsyncEnumerable<T> source,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
             if (source is null)
@@ -444,16 +434,15 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(source));
             }
 
-            using (var enumerator = source.GetEnumerator())
+            await using var enumerator = source.GetAsyncEnumerator(token);
+
+            if (await enumerator.MoveNextAsync().ConfigureAwait(false))
             {
-                if (await enumerator.MoveNextAsync(token).ConfigureAwait(false))
-                {
-                    return enumerator.Current;
-                }
-                else
-                {
-                    throw new InvalidOperationException();
-                }
+                return enumerator.Current;
+            }
+            else
+            {
+                throw new InvalidOperationException();
             }
         }
 
@@ -463,7 +452,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
         /// <param name="predicate">A condition to match against every element in the current sequence.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>The first element in the current sequence if it is not null or empty.</returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that the current sequence or given predicate is null.
@@ -474,10 +463,10 @@ namespace Bogosoft.Collections.Async.Fluent
         public static Task<T> FirstAsync<T>(
             this IAsyncEnumerable<T> source,
             Func<T, bool> predicate,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
-            return source.Where(predicate).FirstAsync(token);
+            return source.WhereAsync(predicate, token).FirstAsync();
         }
 
         /// <summary>
@@ -486,7 +475,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// </summary>
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// The first element in the current sequence or the default value for the
         /// element type if the current sequence is empty.
@@ -496,7 +485,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// </exception>
         public static async Task<T> FirstOrDefaultAsync<T>(
             this IAsyncEnumerable<T> source,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
             if (source is null)
@@ -504,17 +493,11 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(source));
             }
 
-            using (var enumerator = source.GetEnumerator())
-            {
-                if (await enumerator.MoveNextAsync(token).ConfigureAwait(false))
-                {
-                    return enumerator.Current;
-                }
-                else
-                {
-                    return default(T);
-                }
-            }
+            await using var enumerator = source.GetAsyncEnumerator(token);
+
+            return await enumerator.MoveNextAsync().ConfigureAwait(false)
+                 ? enumerator.Current
+                 : default;
         }
 
         /// <summary>
@@ -524,7 +507,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
         /// <param name="predicate">A condition to match every element in the current sequence against.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// The first element in the current sequence that matches the given condition
         /// or the default value of the element type if the current sequence is empty.
@@ -535,10 +518,10 @@ namespace Bogosoft.Collections.Async.Fluent
         public static Task<T> FirstOrDefaultAsync<T>(
             this IAsyncEnumerable<T> source,
             Func<T, bool> predicate,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
-            return source.Where(predicate).FirstOrDefaultAsync(token);
+            return source.WhereAsync(predicate, token).FirstOrDefaultAsync(token);
         }
 
         /// <summary>
@@ -546,7 +529,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// </summary>
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// The last element in the current sequence.
         /// </returns>
@@ -558,7 +541,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// </exception>
         public static async Task<T> LastAsync<T>(
             this IAsyncEnumerable<T> source,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
             if (source is null)
@@ -566,23 +549,24 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(source));
             }
 
-            using (var enumerator = source.GetEnumerator())
+            T last = default;
+
+            await using var enumerator = source.GetAsyncEnumerator(token);
+
+            if (await enumerator.MoveNextAsync().ConfigureAwait(false))
             {
-                T current;
-
-                if (false == await enumerator.MoveNextAsync(token).ConfigureAwait(false))
-                {
-                    throw new InvalidOperationException();
-                }
-
                 do
                 {
-                    current = enumerator.Current;
+                    last = enumerator.Current;
 
-                } while (await enumerator.MoveNextAsync(token).ConfigureAwait(false));
-
-                return current;
+                } while (await enumerator.MoveNextAsync().ConfigureAwait(false));
             }
+            else
+            {
+                throw new InvalidOperationException();
+            }
+
+            return last;
         }
 
         /// <summary>
@@ -591,7 +575,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
         /// <param name="predicate">A condition to match every element of the current sequence against.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// The last element of the current sequence that matches the given condition.
         /// </returns>
@@ -604,10 +588,10 @@ namespace Bogosoft.Collections.Async.Fluent
         public static Task<T> LastAsync<T>(
             this IAsyncEnumerable<T> source,
             Func<T, bool> predicate,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
-            return source.Where(predicate).LastAsync(token);
+            return source.WhereAsync(predicate, token).LastAsync(token);
         }
 
         /// <summary>
@@ -616,7 +600,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// </summary>
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// The last value in the current sequence or the default value of the
         /// element type if the current sequence is empty.
@@ -626,7 +610,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// </exception>
         public static async Task<T> LastOrDefaultAsync<T>(
             this IAsyncEnumerable<T> source,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
             if (source is null)
@@ -634,23 +618,14 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(source));
             }
 
-            using (var enumerator = source.GetEnumerator())
+            T last = default;
+
+            await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
             {
-                T current;
-
-                if (false == await enumerator.MoveNextAsync(token).ConfigureAwait(false))
-                {
-                    return default(T);
-                }
-
-                do
-                {
-                    current = enumerator.Current;
-
-                } while (await enumerator.MoveNextAsync(token).ConfigureAwait(false));
-
-                return current;
+                last = x;
             }
+
+            return last;
         }
 
         /// <summary>
@@ -661,7 +636,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
         /// <param name="predicate">A condition to match against every element in the current sequence.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// The last element in the current sequence that matches the given condition or the default value
         /// of the element type if no elements in the current sequence match the given condition.
@@ -672,10 +647,10 @@ namespace Bogosoft.Collections.Async.Fluent
         public static Task<T> LastOrDefaultAsync<T>(
             this IAsyncEnumerable<T> source,
             Func<T, bool> predicate,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
-            return source.Where(predicate).LastOrDefaultAsync(token);
+            return source.WhereAsync(predicate, token).LastOrDefaultAsync(token);
         }
 
         /// <summary>
@@ -684,20 +659,32 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <typeparam name="TBase">The less-derived type of the elements in the current sequence.</typeparam>
         /// <typeparam name="TDerived">The more-derived type of the elements in the current sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// A sequence of only those elements of the current sequence that are of the given derived type.
         /// </returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that the current sequence is null.
         /// </exception>
-        public static IAsyncEnumerable<TDerived> OfType<TBase, TDerived>(
-            this IAsyncEnumerable<TBase> source
+        public static async IAsyncEnumerable<TDerived> OfTypeAsync<TBase, TDerived>(
+            this IAsyncEnumerable<TBase> source,
+            [EnumeratorCancellation]
+            CancellationToken token = default
             )
+            where TDerived : TBase
         {
-            Type type = typeof(TDerived);
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
 
-            return source.Where(x => x.GetType().IsAssignableFrom(type))
-                         .Select(x => (TDerived)Convert.ChangeType(x, type));
+            await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
+            {
+                if (x is TDerived d)
+                {
+                    yield return d;
+                }
+            }
         }
 
         /// <summary>
@@ -709,6 +696,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// </typeparam>
         /// <param name="source">The current sequence.</param>
         /// <param name="selector">A transform function to apply to each element.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// A new sequence whose elements are the result of invoking the transform function
         /// on each element of the current sequence.
@@ -716,9 +704,11 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that either the current sequence or the given transform function is null
         /// </exception>
-        public static IAsyncEnumerable<TResult> Select<TSource, TResult>(
+        public static async IAsyncEnumerable<TResult> SelectAsync<TSource, TResult>(
             this IAsyncEnumerable<TSource> source,
-            Func<TSource, TResult> selector
+            Func<TSource, TResult> selector,
+            [EnumeratorCancellation]
+            CancellationToken token = default
             )
         {
             if (source is null)
@@ -731,7 +721,10 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(selector));
             }
 
-            return new ProjectedSequence<TSource, TResult>(source, selector);
+            await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
+            {
+                yield return selector.Invoke(x);
+            }
         }
 
         /// <summary>
@@ -743,6 +736,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// </typeparam>
         /// <param name="source">The current sequence.</param>
         /// <param name="selector">An asynchronous transform function to apply to each element.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// A new sequence whose elements are the result of invoking the transform function
         /// on each element of the current sequence.
@@ -750,9 +744,11 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that either the current sequence or the given transform function is null
         /// </exception>
-        public static IAsyncEnumerable<TResult> Select<TSource, TResult>(
+        public static async IAsyncEnumerable<TResult> SelectAsync<TSource, TResult>(
             this IAsyncEnumerable<TSource> source,
-            Func<TSource, CancellationToken, Task<TResult>> selector
+            Func<TSource, CancellationToken, Task<TResult>> selector,
+            [EnumeratorCancellation]
+            CancellationToken token = default
             )
         {
             if (source is null)
@@ -765,7 +761,10 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(selector));
             }
 
-            return new ProjectedSequenceAsync<TSource, TResult>(source, selector);
+            await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
+            {
+                yield return await selector.Invoke(x, token);
+            }
         }
 
         /// <summary>
@@ -775,7 +774,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <typeparam name="T">The type of the elements in the current sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
         /// <param name="target">Another sequence to compare to the current sequence.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// True if the source and other sequence are of the same length and the elements at each
         /// sequence's corresponding positions are equal; false otherwise.
@@ -783,10 +782,10 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that the current sequence or given target sequence is null.
         /// </exception>
-        public static Task<bool> SequenceEqualsAsync<T>(
+        public static ValueTask<bool> SequenceEqualsAsync<T>(
             this IAsyncEnumerable<T> source,
             IAsyncEnumerable<T> target,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
             return target.SequenceEqualsAsync(source, EqualityComparer<T>.Default, token);
@@ -799,7 +798,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <param name="source">The current sequence.</param>
         /// <param name="target">Another sequence to compare to the current sequence.</param>
         /// <param name="comparer">An explicit element comparison strategy.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// True if the source and other sequence are of the same length and the elements at each
         /// sequence's corresponding positions are equal; false otherwise.
@@ -807,11 +806,11 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that the current sequence, given target sequence or given comparer is null.
         /// </exception>
-        public static async Task<bool> SequenceEqualsAsync<T>(
+        public static async ValueTask<bool> SequenceEqualsAsync<T>(
             this IAsyncEnumerable<T> source,
             IAsyncEnumerable<T> target,
             IEqualityComparer<T> comparer,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
             if (source is null)
@@ -829,24 +828,23 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(comparer));
             }
 
-            using (var a = source.GetEnumerator())
-            using (var b = target.GetEnumerator())
-            {
-                while (await a.MoveNextAsync(token).ConfigureAwait(false))
-                {
-                    if (false == await b.MoveNextAsync(token).ConfigureAwait(false))
-                    {
-                        return false;
-                    }
+            await using var a = source.GetAsyncEnumerator(token);
+            await using var b = target.GetAsyncEnumerator(token);
 
-                    if (!comparer.Equals(a.Current, b.Current))
-                    {
-                        return false;
-                    }
+            while (await a.MoveNextAsync().ConfigureAwait(false))
+            {
+                if (!await b.MoveNextAsync().ConfigureAwait(false))
+                {
+                    return false;
                 }
 
-                return false == await b.MoveNextAsync(token).ConfigureAwait(false);
+                if (!comparer.Equals(a.Current, b.Current))
+                {
+                    return false;
+                }
             }
+
+            return !await b.MoveNextAsync().ConfigureAwait(false);
         }
 
         /// <summary>
@@ -854,7 +852,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// </summary>
         /// <typeparam name="T">The type of the elements in the current sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// The first and only element in the current sequence.
         /// </returns>
@@ -866,7 +864,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// </exception>
         public static async Task<T> SingleAsync<T>(
             this IAsyncEnumerable<T> source,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
             if (source is null)
@@ -874,22 +872,21 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(source));
             }
 
-            using (var enumerator = source.GetEnumerator())
+            await using var enumerator = source.GetAsyncEnumerator(token);
+
+            if (!await enumerator.MoveNextAsync().ConfigureAwait(false))
             {
-                if (false == await enumerator.MoveNextAsync(token).ConfigureAwait(false))
-                {
-                    throw new InvalidOperationException("Sequence contains no elements.");
-                }
-
-                var element = enumerator.Current;
-
-                if (await enumerator.MoveNextAsync(token).ConfigureAwait(false))
-                {
-                    throw new InvalidOperationException("Sequence contains more than one element.");
-                }
-
-                return element;
+                throw new InvalidOperationException("Sequence contains no elements.");
             }
+
+            var element = enumerator.Current;
+
+            if (await enumerator.MoveNextAsync().ConfigureAwait(false))
+            {
+                throw new InvalidOperationException("Sequence contains more than one element.");
+            }
+
+            return element;
         }
 
         /// <summary>
@@ -900,7 +897,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <param name="predicate">
         /// A condition to match each element of the current sequence against.
         /// </param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// The only element of the current sequence that matches the given condition.
         /// </returns>
@@ -914,10 +911,10 @@ namespace Bogosoft.Collections.Async.Fluent
         public static Task<T> SingleAsync<T>(
             this IAsyncEnumerable<T> source,
             Func<T, bool> predicate,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
-            return source.Where(predicate).SingleAsync(token);
+            return source.WhereAsync(predicate, token).SingleAsync(token);
         }
 
         /// <summary>
@@ -926,7 +923,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// </summary>
         /// <typeparam name="T">The type of the elements in the current sequence.</typeparam>
         /// <param name="source">The current sequence.</param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// The only element in the current sequence or the default value of the element type
         /// if the current sequence is empty.
@@ -939,7 +936,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// </exception>
         public static async Task<T> SingleOrDefaultAsync<T>(
             this IAsyncEnumerable<T> source,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
             if (source is null)
@@ -947,22 +944,21 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(source));
             }
 
-            using (var enumerator = source.GetEnumerator())
+            await using var enumerator = source.GetAsyncEnumerator(token);
+
+            if (!await enumerator.MoveNextAsync().ConfigureAwait(false))
             {
-                if (false == await enumerator.MoveNextAsync(token).ConfigureAwait(false))
-                {
-                    return default(T);
-                }
-
-                var element = enumerator.Current;
-
-                if (await enumerator.MoveNextAsync(token).ConfigureAwait(false))
-                {
-                    throw new InvalidOperationException("Sequence contains more than one element.");
-                }
-
-                return element;
+                return default;
             }
+
+            var element = enumerator.Current;
+
+            if (await enumerator.MoveNextAsync().ConfigureAwait(false))
+            {
+                throw new InvalidOperationException("Sequence contains more than one element.");
+            }
+
+            return element;
         }
 
         /// <summary>
@@ -974,7 +970,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <param name="predicate">
         /// A condition to apply to each element in the current sequence.
         /// </param>
-        /// <param name="token">A cancellation instruction.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// The only element in the current sequence that satisfies the given condition.
         /// </returns>
@@ -988,10 +984,10 @@ namespace Bogosoft.Collections.Async.Fluent
         public static Task<T> SingleOrDefaultAsync<T>(
             this IAsyncEnumerable<T> source,
             Func<T, bool> predicate,
-            CancellationToken token = default(CancellationToken)
+            CancellationToken token = default
             )
         {
-            return source.Where(predicate).SingleOrDefaultAsync(token);
+            return source.WhereAsync(predicate, token).SingleOrDefaultAsync(token);
         }
 
         /// <summary>
@@ -1002,6 +998,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <param name="amount">
         /// A value corresponding to the number of elements to skip.
         /// </param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// A new sequence that contains elements from the current sequence that occur
         /// after skipping the given number of elements.
@@ -1009,14 +1006,31 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that the current sequence is null.
         /// </exception>
-        public static IAsyncEnumerable<T> Skip<T>(this IAsyncEnumerable<T> source, ulong amount)
+        public static async IAsyncEnumerable<T> SkipAsync<T>(
+            this IAsyncEnumerable<T> source,
+            long amount,
+            [EnumeratorCancellation]
+            CancellationToken token = default
+            )
         {
             if (source is null)
             {
                 throw new ArgumentNullException(nameof(source));
             }
 
-            return new SkippedSequence<T>(source, amount);
+            await using var enumerator = source.GetAsyncEnumerator(token);
+
+            long skipped = 0;
+
+            while (skipped < amount && await enumerator.MoveNextAsync().ConfigureAwait(false))
+            {
+                skipped += 1;
+            }
+
+            while (await enumerator.MoveNextAsync().ConfigureAwait(false))
+            {
+                yield return enumerator.Current;
+            }
         }
 
         /// <summary>
@@ -1028,6 +1042,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// A value corresponding to the number of contiguous elements
         /// to return from the start of the current sequence.
         /// </param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// A new sequence that contains the given number of contiguous elements
         /// from the start of the current sequence.
@@ -1035,14 +1050,78 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that the current sequence is null.
         /// </exception>
-        public static IAsyncEnumerable<T> Take<T>(this IAsyncEnumerable<T> source, ulong count)
+        public static async IAsyncEnumerable<T> TakeAsync<T>(
+            this IAsyncEnumerable<T> source,
+            long count,
+            [EnumeratorCancellation]
+            CancellationToken token = default
+            )
         {
             if (source is null)
             {
                 throw new ArgumentNullException(nameof(source));
             }
 
-            return new LimitedSequence<T>(source, count);
+            long taken = 0;
+
+            await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
+            {
+                if (taken++ >= count)
+                {
+                    break;
+                }
+
+                yield return x;
+            }
+        }
+
+        /// <summary>
+        /// Conver the current asynchronous sequence into an array.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements in the current sequence.</typeparam>
+        /// <param name="source">The current sequence.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
+        /// <returns>An array consisting of the elements of the current sequence.</returns>
+        public static async Task<T[]> ToArrayAsync<T>(
+            this IAsyncEnumerable<T> source,
+            CancellationToken token = default
+            )
+        {
+            var length = 0;
+            var result = new T[16];
+
+            await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
+            {
+                if (length == result.Length)
+                {
+                    Array.Resize(ref result, length * 2);
+                }
+
+                result[length++] = x;
+            }
+
+            if (length < result.Length)
+            {
+                Array.Resize(ref result, length);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Convert the current synchronous sequence into an asynchronous sequence.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements in the current sequence.</typeparam>
+        /// <param name="source">The current synchronous sequence.</param>
+        /// <returns>The current synchronous sequence as an asynchronous sequence.</returns>
+#pragma warning disable CS1998
+        public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(this IEnumerable<T> source)
+#pragma warning restore CS1998
+        {
+            foreach (var x in source)
+            {
+                yield return x;
+            }
         }
 
         /// <summary>
@@ -1053,6 +1132,7 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <param name="predicate">
         /// A condition against which every element in the current sequence will be matched.
         /// </param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// A new sequence consisting only of elements from the current sequence that
         /// match the given predicate.
@@ -1060,7 +1140,12 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that either the current sequence of the given predicate is null.
         /// </exception>
-        public static IAsyncEnumerable<T> Where<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate)
+        public static async IAsyncEnumerable<T> WhereAsync<T>(
+            this IAsyncEnumerable<T> source,
+            Func<T, bool> predicate,
+            [EnumeratorCancellation]
+            CancellationToken token = default
+            )
         {
             if (source is null)
             {
@@ -1072,7 +1157,13 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(predicate));
             }
 
-            return new FilteredSequence<T>(source, predicate);
+            await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
+            {
+                if (predicate.Invoke(x))
+                {
+                    yield return x;
+                }
+            }
         }
 
         /// <summary>
@@ -1086,16 +1177,19 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <param name="selector">
         /// A function to apply to the corresponding elements in the current and other sequences.
         /// </param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// A sequence of elements zipped together from the current and another sequence.
         /// </returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that the current sequence, other sequence or selector is null.
         /// </exception>
-        public static IAsyncEnumerable<TResult> Zip<TSource, TOther, TResult>(
+        public static async IAsyncEnumerable<TResult> ZipAsync<TSource, TOther, TResult>(
             this IAsyncEnumerable<TSource> source,
             IAsyncEnumerable<TOther> other,
-            Func<TSource, TOther, TResult> selector
+            Func<TSource, TOther, TResult> selector,
+            [EnumeratorCancellation]
+            CancellationToken token = default
             )
         {
             if (source is null)
@@ -1113,7 +1207,13 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(selector));
             }
 
-            return new ZippedSequence<TSource, TOther, TResult>(source, other, selector);
+            await using var a = source.GetAsyncEnumerator(token);
+            await using var b = other.GetAsyncEnumerator(token);
+
+            while (await a.MoveNextAsync().ConfigureAwait(false) && await b.MoveNextAsync().ConfigureAwait(false))
+            {
+                yield return selector.Invoke(a.Current, b.Current);
+            }
         }
 
         /// <summary>
@@ -1127,16 +1227,19 @@ namespace Bogosoft.Collections.Async.Fluent
         /// <param name="selector">
         /// A function to apply to the corresponding elements in the current and other sequences.
         /// </param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
         /// <returns>
         /// A sequence of elements zipped together from the current and another sequence.
         /// </returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown in the event that the current sequence, other sequence or selector is null.
         /// </exception>
-        public static IAsyncEnumerable<TResult> Zip<TSource, TOther, TResult>(
+        public static async IAsyncEnumerable<TResult> ZipAsync<TSource, TOther, TResult>(
             this IAsyncEnumerable<TSource> source,
             IAsyncEnumerable<TOther> other,
-            Func<TSource, TOther, CancellationToken, Task<TResult>> selector
+            Func<TSource, TOther, CancellationToken, Task<TResult>> selector,
+            [EnumeratorCancellation]
+            CancellationToken token = default
             )
         {
             if (source is null)
@@ -1154,7 +1257,41 @@ namespace Bogosoft.Collections.Async.Fluent
                 throw new ArgumentNullException(nameof(selector));
             }
 
-            return new ZippedSequenceAsync<TSource, TOther, TResult>(source, other, selector);
+            await using var a = source.GetAsyncEnumerator(token);
+            await using var b = other.GetAsyncEnumerator(token);
+
+            while (await a.MoveNextAsync().ConfigureAwait(false) && await b.MoveNextAsync().ConfigureAwait(false))
+            {
+                yield return await selector.Invoke(a.Current, b.Current, token);
+            }
         }
+    }
+
+    /// <summary>
+    /// Provides static members for working with <see cref="IAsyncEnumerable{T}"/> types.
+    /// </summary>
+    public static class AsyncEnumerable<T>
+    {
+        class EmptySequence : IAsyncEnumerable<T>
+        {
+            class Enumerator : IAsyncEnumerator<T>
+            {
+                public T Current => throw new InvalidOperationException();
+
+                public ValueTask DisposeAsync() => new ValueTask();
+
+                public ValueTask<bool> MoveNextAsync() => new ValueTask<bool>(false);
+            }
+
+            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token = default)
+            {
+                return new Enumerator();
+            }
+        }
+
+        /// <summary>
+        /// Get an empty asynchronous sequence.
+        /// </summary>
+        public static IAsyncEnumerable<T> Empty => new EmptySequence();
     }
 }

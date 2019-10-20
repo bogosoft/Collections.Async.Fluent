@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using Shouldly;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -71,13 +72,13 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
         {
             var target = 10;
 
-            Func<int, bool> predicate = x => x == target;
+            bool IsTarget(int x) => x == target;
 
             var source = Enumerable.Range(0, 16).ToArray();
 
-            source.Count(predicate).ShouldBe(1);
+            source.Count(IsTarget).ShouldBe(1);
 
-            await source.ToAsyncEnumerable().SingleOrDefaultAsync(predicate).ShouldBeAsync(target);
+            await source.ToAsyncEnumerable().SingleOrDefaultAsync(IsTarget).ShouldBeAsync(target);
         }
 
         [TestCase]
@@ -103,9 +104,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             source.ShouldBeNull();
 
-            Action test = () => source.SingleOrDefaultAsync(Integer.Even);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.SingleOrDefaultAsync(Integer.Even).ShouldThrow<ArgumentNullException>();
         }
 
         [TestCase]
