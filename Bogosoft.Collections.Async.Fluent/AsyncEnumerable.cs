@@ -1446,6 +1446,61 @@ namespace Bogosoft.Collections.Async.Fluent
         }
 
         /// <summary>
+        /// Convert the current sequence to a hash set using a default equality comparer.
+        /// </summary>
+        /// <typeparam name="T">The type of the element in the current sequence.</typeparam>
+        /// <param name="source">The current sequence.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
+        /// <returns>A new hash set.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown in the event that the current sequence is null.
+        /// </exception>
+        public static Task<HashSet<T>> ToHashSetAsync<T>(
+            this IAsyncEnumerable<T> source,
+            CancellationToken token = default
+            )
+        {
+            return source.ToHashSetAsync(EqualityComparer<T>.Default, token);
+        }
+
+        /// <summary>
+        /// Convert the current sequence to a hash set.
+        /// </summary>
+        /// <typeparam name="T">The type of the element in the current sequence.</typeparam>
+        /// <param name="source">The current sequence.</param>
+        /// <param name="comparer">A comparer to be used in the resulting hash set.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
+        /// <returns>A new hash set.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown in the event that the current sequence or given comparer is null.
+        /// </exception>
+        public static async Task<HashSet<T>> ToHashSetAsync<T>(
+            this IAsyncEnumerable<T> source,
+            IEqualityComparer<T> comparer,
+            CancellationToken token = default
+            )
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            if (comparer is null)
+            {
+                throw new ArgumentNullException(nameof(comparer));
+            }
+
+            var set = new HashSet<T>(comparer);
+
+            await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
+            {
+                set.Add(x);
+            }
+
+            return set;
+        }
+
+        /// <summary>
         /// Convert the current sequence into a list.
         /// </summary>
         /// <typeparam name="T">The type of the elements in the current sequence.</typeparam>
