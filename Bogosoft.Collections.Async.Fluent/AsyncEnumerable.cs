@@ -1313,6 +1313,40 @@ namespace Bogosoft.Collections.Async.Fluent
         }
 
         /// <summary>
+        /// Convert the current asynchronous sequence into a synchronous sequence.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements in the current sequence.</typeparam>
+        /// <param name="source">The current sequence.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
+        /// <returns>The current asynchronous sequence as a synchronous sequence.</returns>
+        public static IEnumerable<T> ToSynchronous<T>(
+            this IAsyncEnumerable<T> source,
+            CancellationToken token = default
+            )
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            IAsyncEnumerator<T> enumerator = null;
+
+            try
+            {
+                enumerator = source.GetAsyncEnumerator(token);
+
+                while (enumerator.MoveNextAsync().GetAwaiter().GetResult())
+                {
+                    yield return enumerator.Current;
+                }
+            }
+            finally
+            {
+                enumerator?.DisposeAsync().GetAwaiter().GetResult();
+            }
+        }
+
+        /// <summary>
         /// Filter the current sequence using a given predicate.
         /// </summary>
         /// <typeparam name="T">The type of the elements in the current sequence.</typeparam>

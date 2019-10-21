@@ -8,6 +8,13 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 {
     static class Extensions
     {
+        internal static void Consume<T>(this IEnumerable<T> source)
+        {
+            foreach (var x in source)
+            {
+            }
+        }
+
         internal static async Task ConsumeAsync<T>(
             this IAsyncEnumerable<T> source,
             CancellationToken token = default
