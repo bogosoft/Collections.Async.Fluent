@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using Shouldly;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -17,30 +18,29 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
             var ints = Integer.RandomSequence(256).ToArray();
             var source = ints.ToAsyncEnumerable();
 
-            using (var a = source.Skip((ulong)count).GetEnumerator())
-            using (var b = ints.Skip(count).GetEnumerator())
+            await using var a = source.SkipAsync(count).GetAsyncEnumerator();
+            using var b = ints.Skip(count).GetEnumerator();
+
+            while (await a.MoveNextAsync())
             {
-                while (await a.MoveNextAsync())
-                {
-                    b.MoveNext().ShouldBeTrue();
+                b.MoveNext().ShouldBeTrue();
 
-                    b.Current.ShouldBe(a.Current);
-                }
-
-                b.MoveNext().ShouldBeFalse();
+                b.Current.ShouldBe(a.Current);
             }
+
+            b.MoveNext().ShouldBeFalse();
         }
 
         [TestCase]
         public async Task SkipReturnsEmptySequenceWhenMoreItemsAreSkippedThanArePresentInASequence()
         {
-            ulong size = 16;
+            long size = 16;
 
             var sequence = Enumerable.Range(0, (int)size).ToAsyncEnumerable();
 
-            var count = await sequence.Skip(size).CountAsync();
+            var count = await sequence.SkipAsync(size).CountAsync();
 
-            count.ShouldBe((ulong)0);
+            count.ShouldBe(0);
         }
 
         [TestCase]
@@ -50,9 +50,9 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             source.ShouldBeNull();
 
-            Action test = () => source.Skip(16);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.SkipAsync(16)
+                  .ConsumeAsync()
+                  .ShouldThrow<ArgumentNullException>();
         }
     }
 }

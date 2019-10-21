@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using Shouldly;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -15,7 +16,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
         {
             var source = Integer.RandomSequence().ToArray();
 
-            await source.ToAsyncEnumerable().CountAsync().ShouldBeAsync((ulong)source.Length);
+            await source.ToAsyncEnumerable().CountAsync().ShouldBeAsync(source.Length);
         }
 
         [TestCase]
@@ -25,7 +26,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             source.ShouldBeNull();
 
-            await source.CountAsync().ShouldThrowAsync<ArgumentNullException>();
+            await source.CountAsync().ShouldThrowAsync<long, ArgumentNullException>();
         }
 
         [TestCase]

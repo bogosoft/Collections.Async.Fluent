@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using Shouldly;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,18 +28,17 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             var source = ints.ToAsyncEnumerable();
 
-            using (var a = source.GetEnumerator())
-            using (var b = source.Select(ToString).GetEnumerator())
+            await using var a = source.GetAsyncEnumerator();
+            await using var b = source.SelectAsync(ToString).GetAsyncEnumerator();
+
+            while (await a.MoveNextAsync())
             {
-                while (await a.MoveNextAsync())
-                {
-                    await b.MoveNextAsync().ShouldBeTrueAsync();
+                await b.MoveNextAsync().ShouldBeTrueAsync();
 
-                    b.Current.ShouldBe(ToString(a.Current));
-                }
-
-                await b.MoveNextAsync().ShouldBeFalseAsync();
+                b.Current.ShouldBe(ToString(a.Current));
             }
+
+            await b.MoveNextAsync().ShouldBeFalseAsync();
         }
 
         [TestCase]
@@ -48,18 +48,17 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             var source = ints.ToAsyncEnumerable();
 
-            using (var a = source.GetEnumerator())
-            using (var b = source.Select(ToStringAsync).GetEnumerator())
+            await using var a = source.GetAsyncEnumerator();
+            await using var b = source.SelectAsync(ToStringAsync).GetAsyncEnumerator();
+
+            while (await a.MoveNextAsync())
             {
-                while (await a.MoveNextAsync())
-                {
-                    await b.MoveNextAsync().ShouldBeTrueAsync();
+                await b.MoveNextAsync().ShouldBeTrueAsync();
 
-                    b.Current.ShouldBe(await ToStringAsync(a.Current, CancellationToken.None));
-                }
-
-                await b.MoveNextAsync().ShouldBeFalseAsync();
+                b.Current.ShouldBe(await ToStringAsync(a.Current, CancellationToken.None));
             }
+
+            await b.MoveNextAsync().ShouldBeFalseAsync();
         }
 
         [TestCase]
@@ -85,9 +84,9 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             source.ShouldBeNull();
 
-            Action test = () => source.Select(ToString);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.SelectAsync(ToString)
+                  .ConsumeAsync()
+                  .ShouldThrow<ArgumentNullException>();
         }
 
         [TestCase]
@@ -101,9 +100,9 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             selector.ShouldBeNull();
 
-            Action test = () => source.Select(selector);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.SelectAsync(selector)
+                  .ConsumeAsync()
+                  .ShouldThrow<ArgumentNullException>();
         }
 
         [TestCase]
@@ -113,9 +112,9 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             source.ShouldBeNull();
 
-            Action test = () => source.Select(ToStringAsync);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.SelectAsync(ToStringAsync)
+                  .ConsumeAsync()
+                  .ShouldThrow<ArgumentNullException>();
         }
     }
 }

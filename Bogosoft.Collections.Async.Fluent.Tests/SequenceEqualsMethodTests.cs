@@ -38,7 +38,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             comparer.ShouldBeNull();
 
-            await b.SequenceEqualsAsync(a, comparer).ShouldThrowAsync<ArgumentNullException>();
+            await b.SequenceEqualsAsync(a, comparer).ShouldThrowAsync<bool, ArgumentNullException>();
         }
 
         [TestCase]
@@ -50,7 +50,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             b.ShouldBeNull();
 
-            await b.SequenceEqualsAsync(a).ShouldThrowAsync<ArgumentNullException>();
+            await b.SequenceEqualsAsync(a).ShouldThrowAsync<bool, ArgumentNullException>();
         }
 
         [TestCase]
@@ -62,7 +62,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             b.ShouldNotBeNull();
 
-            await b.SequenceEqualsAsync(a).ShouldThrowAsync<ArgumentNullException>();
+            await b.SequenceEqualsAsync(a).ShouldThrowAsync<bool, ArgumentNullException>();
         }
     }
 }

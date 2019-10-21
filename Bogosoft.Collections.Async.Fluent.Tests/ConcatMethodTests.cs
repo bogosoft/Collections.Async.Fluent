@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using Shouldly;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -16,22 +17,21 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
             var source = new int[] { 0, 1, 2, 3, 4 };
             var target = new int[] { 5, 6, 7, 8, 9 };
 
-            var combined = source.ToAsyncEnumerable().Concat(target.ToAsyncEnumerable());
+            var combined = source.ToAsyncEnumerable().ConcatAsync(target.ToAsyncEnumerable());
 
             combined.ShouldBeAssignableTo<IAsyncEnumerable<int>>();
 
-            using (var a = combined.GetEnumerator())
-            using (var b = source.Concat(target).GetEnumerator())
+            await using var a = combined.GetAsyncEnumerator();
+            using var b = source.Concat(target).GetEnumerator();
+
+            while (await a.MoveNextAsync())
             {
-                while (await a.MoveNextAsync())
-                {
-                    b.MoveNext().ShouldBeTrue();
+                b.MoveNext().ShouldBeTrue();
 
-                    a.Current.ShouldBe(b.Current);
-                }
-
-                b.MoveNext().ShouldBeFalse();
+                a.Current.ShouldBe(b.Current);
             }
+
+            b.MoveNext().ShouldBeFalse();
         }
 
         [TestCase]
@@ -43,9 +43,9 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             target.ShouldNotBeNull();
 
-            Action test = () => source = source.Concat(target);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.ConcatAsync(target)
+                  .ConsumeAsync()
+                  .ShouldThrow<ArgumentNullException>();
         }
 
         [TestCase]
@@ -57,9 +57,9 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             target.ShouldBeNull();
 
-            Action test = () => source = source.Concat(target);
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.ConcatAsync(target)
+                  .ConsumeAsync()
+                  .ShouldThrow<ArgumentNullException>();
         }
     }
 }

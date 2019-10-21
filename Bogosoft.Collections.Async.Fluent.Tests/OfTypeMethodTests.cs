@@ -30,7 +30,7 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
                 798u
             };
 
-            var actual = (int)await items.ToAsyncEnumerable().OfType<object, string>().CountAsync();
+            var actual = (int)await items.ToAsyncEnumerable().OfTypeAsync<object, string>().CountAsync();
 
             var expected = items.Where(IsString).Count();
 
@@ -44,9 +44,9 @@ namespace Bogosoft.Collections.Async.Fluent.Tests
 
             source.ShouldBeNull();
 
-            Action test = () => source.OfType<object, string>();
-
-            test.ShouldThrow<ArgumentNullException>();
+            source.OfTypeAsync<object, string>()
+                  .ConsumeAsync()
+                  .ShouldThrow<ArgumentNullException>();
         }
     }
 }
