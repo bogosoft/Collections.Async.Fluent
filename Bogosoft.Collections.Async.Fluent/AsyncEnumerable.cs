@@ -761,6 +761,17 @@ namespace Bogosoft.Collections.Async.Fluent
             }
         }
 
+        /// <summary>
+        /// Prepend a given element to the current sequence.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements in the current sequence.</typeparam>
+        /// <param name="source">The current sequence.</param>
+        /// <param name="first">An element to prepend to the current sequence.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
+        /// <returns>The current sequence with the given element prepended to it.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown in the event that the current sequence is null.
+        /// </exception>
         public static async IAsyncEnumerable<T> PrependAsync<T>(
             this IAsyncEnumerable<T> source,
             T first,
@@ -768,7 +779,95 @@ namespace Bogosoft.Collections.Async.Fluent
             CancellationToken token = default
             )
         {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
             yield return first;
+
+            await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
+            {
+                yield return x;
+            }
+        }
+
+        /// <summary>
+        /// Prepend a given sequence to the current sequence.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements in the current sequence.</typeparam>
+        /// <param name="source">The current sequence.</param>
+        /// <param name="other">A sequence to prepend to the current sequence.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
+        /// <returns>The current sequence with the given sequence prepended to it.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown in the event that either the current or given sequence is null.
+        /// </exception>
+        public static async IAsyncEnumerable<T> PrependAsync<T>(
+            this IAsyncEnumerable<T> source,
+            IAsyncEnumerable<T> other,
+            [EnumeratorCancellation]
+            CancellationToken token = default
+            )
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            if (other is null)
+            {
+                throw new ArgumentNullException(nameof(other));
+            }
+
+            await foreach (var y in other.WithCancellation(token).ConfigureAwait(false))
+            {
+                yield return y;
+            }
+
+            await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
+            {
+                yield return x;
+            }
+        }
+
+        /// <summary>
+        /// Prepend a given sequence to the current sequence.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements in the current sequence.</typeparam>
+        /// <param name="source">The current sequence.</param>
+        /// <param name="other">A sequence to prepend to the current sequence.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
+        /// <returns>The current sequence with the given sequence prepended to it.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown in the event that either the current or given sequence is null.
+        /// </exception>
+        public static async IAsyncEnumerable<T> PrependAsync<T>(
+            this IAsyncEnumerable<T> source,
+            IEnumerable<T> other,
+            [EnumeratorCancellation]
+            CancellationToken token = default
+            )
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            if (other is null)
+            {
+                throw new ArgumentNullException(nameof(other));
+            }
+
+            foreach (var y in other)
+            {
+                if (token.IsCancellationRequested)
+                {
+                    yield break;
+                }
+
+                yield return y;
+            }
 
             await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
             {
