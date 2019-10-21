@@ -1403,6 +1403,11 @@ namespace Bogosoft.Collections.Async.Fluent
             CancellationToken token = default
             )
         {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
             var length = 0;
             var result = new T[16];
 
