@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -1443,6 +1443,36 @@ namespace Bogosoft.Collections.Async.Fluent
             {
                 yield return x;
             }
+        }
+
+        /// <summary>
+        /// Convert the current sequence into a list.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements in the current sequence.</typeparam>
+        /// <param name="source">The current sequence.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
+        /// <returns>The elements of the current sequence in a list.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown in the event that the current sequence is null.
+        /// </exception>
+        public static async Task<List<T>> ToListAsync<T>(
+            this IAsyncEnumerable<T> source,
+            CancellationToken token = default
+            )
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            var list = new List<T>();
+
+            await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
+            {
+                list.Add(x);
+            }
+
+            return list;
         }
 
         /// <summary>
