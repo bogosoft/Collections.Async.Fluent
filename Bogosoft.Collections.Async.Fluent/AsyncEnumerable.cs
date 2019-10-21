@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -1443,6 +1443,98 @@ namespace Bogosoft.Collections.Async.Fluent
             {
                 yield return x;
             }
+        }
+
+        /// <summary>
+        /// Convert the current sequence into a dictionary.
+        /// </summary>
+        /// <typeparam name="TSource">The type of the elements in the current sequence.</typeparam>
+        /// <typeparam name="TKey">The type of the keys in the new dictionary.</typeparam>
+        /// <typeparam name="TValue">The type of the values in the new dictionary.</typeparam>
+        /// <param name="source">The current sequence.</param>
+        /// <param name="keySelector">
+        /// A strategy for extracting a value of the key type from each element.
+        /// </param>
+        /// <param name="valueSelector">
+        /// A strategy for extracting a value of the value type from each element.
+        /// </param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
+        /// <returns>A new dictionary whose keys and values are computed from each element.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown in the event that the current sequence or either given selector is null.
+        /// </exception>
+        public static  Task<Dictionary<TKey, TValue>> ToDictionaryAsync<TSource, TKey, TValue>(
+            this IAsyncEnumerable<TSource> source,
+            Func<TSource, TKey> keySelector,
+            Func<TSource, TValue> valueSelector,
+            CancellationToken token = default
+            )
+        {
+            return source.ToDictionaryAsync(
+                keySelector,
+                valueSelector,
+                EqualityComparer<TKey>.Default,
+                token
+                );
+        }
+
+        /// <summary>
+        /// Convert the current sequence into a dictionary.
+        /// </summary>
+        /// <typeparam name="TSource">The type of the elements in the current sequence.</typeparam>
+        /// <typeparam name="TKey">The type of the keys in the new dictionary.</typeparam>
+        /// <typeparam name="TValue">The type of the values in the new dictionary.</typeparam>
+        /// <param name="source">The current sequence.</param>
+        /// <param name="keySelector">
+        /// A strategy for extracting a value of the key type from each element.
+        /// </param>
+        /// <param name="valueSelector">
+        /// A strategy for extracting a value of the value type from each element.
+        /// </param>
+        /// <param name="comparer">
+        /// A comparer to be used when determining whether two objects of the key type are equal.
+        /// </param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
+        /// <returns>A new dictionary whose keys and values are computed from each element.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown in the event that the current sequence, either given selector, or given comparer is null.
+        /// </exception>
+        public static async Task<Dictionary<TKey, TValue>> ToDictionaryAsync<TSource, TKey, TValue>(
+            this IAsyncEnumerable<TSource> source,
+            Func<TSource, TKey> keySelector,
+            Func<TSource, TValue> valueSelector,
+            IEqualityComparer<TKey> comparer,
+            CancellationToken token = default
+            )
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            if (keySelector is null)
+            {
+                throw new ArgumentNullException(nameof(keySelector));
+            }
+
+            if (valueSelector is null)
+            {
+                throw new ArgumentNullException(nameof(valueSelector));
+            }
+
+            if (comparer is null)
+            {
+                throw new ArgumentNullException(nameof(comparer));
+            }
+
+            var dictionary = new Dictionary<TKey, TValue>(comparer);
+
+            await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
+            {
+                dictionary[keySelector.Invoke(x)] = valueSelector.Invoke(x);
+            }
+
+            return dictionary;
         }
 
         /// <summary>
