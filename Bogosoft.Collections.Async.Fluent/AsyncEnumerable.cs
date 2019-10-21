@@ -956,6 +956,134 @@ namespace Bogosoft.Collections.Async.Fluent
         }
 
         /// <summary>
+        /// Project each element of the current sequence to its own sequence and then
+        /// flatten the projected sequences into a single sequence.
+        /// </summary>
+        /// <typeparam name="TSource">The type of the elements in the current sequence</typeparam>
+        /// <typeparam name="TResult">The type of the elements of the final sequence.</typeparam>
+        /// <param name="source">The current sequence.</param>
+        /// <param name="selector">
+        /// A transformation function to apply to each element of the current sequence.
+        /// </param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
+        /// <returns>
+        /// A sequence consisting of each element projected to its own sequence and each of those
+        /// sequences combined into a single, flattened sequence of elements.
+        /// </returns>
+        public static async IAsyncEnumerable<TResult> SelectManyAsync<TSource, TResult>(
+            this IAsyncEnumerable<TSource> source,
+            Func<TSource, IAsyncEnumerable<TResult>> selector,
+            [EnumeratorCancellation]
+            CancellationToken token = default
+            )
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            if (selector is null)
+            {
+                throw new ArgumentNullException(nameof(selector));
+            }
+
+            await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
+            {
+                await foreach (var y in selector.Invoke(x).WithCancellation(token).ConfigureAwait(false))
+                {
+                    yield return y;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Project each element of the current sequence to its own sequence and then
+        /// flatten the projected sequences into a single sequence.
+        /// </summary>
+        /// <typeparam name="TSource">The type of the elements in the current sequence</typeparam>
+        /// <typeparam name="TResult">The type of the elements of the final sequence.</typeparam>
+        /// <param name="source">The current sequence.</param>
+        /// <param name="selector">
+        /// A transformation function to apply to each element of the current sequence.
+        /// </param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
+        /// <returns>
+        /// A sequence consisting of each element projected to its own sequence and each of those
+        /// sequences combined into a single, flattened sequence of elements.
+        /// </returns>
+        public static async IAsyncEnumerable<TResult> SelectManyAsync<TSource, TResult>(
+            this IAsyncEnumerable<TSource> source,
+            Func<TSource, IEnumerable<TResult>> selector,
+            [EnumeratorCancellation]
+            CancellationToken token = default
+            )
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            if (selector is null)
+            {
+                throw new ArgumentNullException(nameof(selector));
+            }
+
+            await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
+            {
+                foreach (var y in selector.Invoke(x))
+                {
+                    yield return y;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Project each element of the current sequence to its own sequence and then
+        /// flatten the projected sequences into a single sequence.
+        /// </summary>
+        /// <typeparam name="TSource">The type of the elements in the current sequence</typeparam>
+        /// <typeparam name="TResult">The type of the elements of the final sequence.</typeparam>
+        /// <param name="source">The current sequence.</param>
+        /// <param name="selector">
+        /// A transformation function to apply to each element of the current sequence.
+        /// </param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
+        /// <returns>
+        /// A sequence consisting of each element projected to its own sequence and each of those
+        /// sequences combined into a single, flattened sequence of elements.
+        /// </returns>
+        public static async IAsyncEnumerable<TResult> SelectManyAsync<TSource, TResult>(
+            this IEnumerable<TSource> source,
+            Func<TSource, IAsyncEnumerable<TResult>> selector,
+            [EnumeratorCancellation]
+            CancellationToken token = default
+            )
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            if (selector is null)
+            {
+                throw new ArgumentNullException(nameof(selector));
+            }
+
+            foreach (var x in source)
+            {
+                if (token.IsCancellationRequested)
+                {
+                    yield break;
+                }
+
+                await foreach (var y in selector.Invoke(x).WithCancellation(token).ConfigureAwait(false))
+                {
+                    yield return y;
+                }
+            }
+        }
+
+        /// <summary>
         /// Compare the current sequence to another for equality. The default comparison strategy
         /// for the element type of the current sequence will be used.
         /// </summary>
