@@ -486,6 +486,52 @@ namespace Bogosoft.Collections.Async.Fluent
         }
 
         /// <summary>
+        /// Obtain the element from the current sequence at a given index.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
+        /// <param name="source">The current sequence.</param>
+        /// <param name="index">
+        /// A value corresponding to an element position within the current stream.
+        /// </param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
+        /// <returns>The element at the given index if successful.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown in the case that the current source is null.
+        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// Thrown in the event that the given index is less than zero or
+        /// greater than or equal to the size of the current sequence.
+        /// </exception>
+        public static async Task<T> ElementAtAsync<T>(
+            this IAsyncEnumerable<T> source,
+            long index,
+            CancellationToken token = default
+            )
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            if (index < 0)
+            {
+                throw new ArgumentOutOfRangeException("Provided index cannot be less than zero (0).");
+            }
+
+            long current = 0;
+
+            await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
+            {
+                if (current++ == index)
+                {
+                    return x;
+                }
+            }
+
+            throw new ArgumentOutOfRangeException("Provided index was greater than sequence length.");
+        }
+
+        /// <summary>
         /// Get the first element in the current sequence.
         /// </summary>
         /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
