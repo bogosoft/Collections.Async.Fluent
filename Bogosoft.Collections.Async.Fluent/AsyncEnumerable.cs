@@ -111,6 +111,80 @@ namespace Bogosoft.Collections.Async.Fluent
         }
 
         /// <summary>
+        /// Append an element to the end of the current sequence.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements in the current sequence.</typeparam>
+        /// <param name="source">The current sequence.</param>
+        /// <param name="last">An item to append to the end of the current sequence.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
+        /// <returns>The current sequence with the given element appended to it.</returns>
+        /// <exception cref="ArgumentException">
+        /// Thrown in the event that the current sequence is null.
+        /// </exception>
+        public static async IAsyncEnumerable<T> AppendAsync<T>(
+            this IAsyncEnumerable<T> source,
+            T last,
+            [EnumeratorCancellation]
+            CancellationToken token = default
+            )
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
+            {
+                yield return x;
+            }
+
+            yield return last;
+        }
+
+        /// <summary>
+        /// Append a synchronous sequence of elements to the end of the current sequence. To append an
+        /// asynchronous sequence, use
+        /// <see cref="ConcatAsync{T}(IAsyncEnumerable{T}, IAsyncEnumerable{T}, CancellationToken)"/>.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements in the current sequence.</typeparam>
+        /// <param name="source">The current sequence.</param>
+        /// <param name="other">A sequence of elements to be appended to the current sequence.</param>
+        /// <param name="token">An opportunity to respond to a cancellation request.</param>
+        /// <returns>
+        /// The current sequence with the given sequence appended to it.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown in the event that either the current or given sequence is null.
+        /// </exception>
+        public static async IAsyncEnumerable<T> AppendAsync<T>(
+            this IAsyncEnumerable<T> source,
+            IEnumerable<T> other,
+            [EnumeratorCancellation]
+            CancellationToken token = default
+            )
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            if (other is null)
+            {
+                throw new ArgumentNullException(nameof(other));
+            }
+
+            await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
+            {
+                yield return x;
+            }
+
+            foreach (var y in other)
+            {
+                yield return y;
+            }
+        }
+
+        /// <summary>
         /// Configure the current sequence so that, when enumerated, a given
         /// action is invoked on each enumerated element.
         /// </summary>
@@ -684,6 +758,21 @@ namespace Bogosoft.Collections.Async.Fluent
                 {
                     yield return d;
                 }
+            }
+        }
+
+        public static async IAsyncEnumerable<T> PrependAsync<T>(
+            this IAsyncEnumerable<T> source,
+            T first,
+            [EnumeratorCancellation]
+            CancellationToken token = default
+            )
+        {
+            yield return first;
+
+            await foreach (var x in source.WithCancellation(token).ConfigureAwait(false))
+            {
+                yield return x;
             }
         }
 
